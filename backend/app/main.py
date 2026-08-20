@@ -8,7 +8,7 @@ from .database import Base,engine,SessionLocal
 from .routers import auth as auth_router,chat,donations,matches,ratings,requests,transactions,notifications,dashboard,search,assistant,catalogs,admin,support
 Base.metadata.create_all(bind=engine)
 app=FastAPI(title='Red Solidaria de Donaciones para Mascotas',description='Plataforma colaborativa para donar y solicitar medicamentos, alimentos, accesorios e insumos para mascotas.',version='2.1.1')
-app.add_middleware(CORSMiddleware,allow_origins=['http://localhost:5173','http://127.0.0.1:5173','https://frontend-w13q.onrender.com'],allow_credentials=True,allow_methods=['*'],allow_headers=['*'])
+app.add_middleware(CORSMiddleware,allow_origins=['http://localhost:5173','http://127.0.0.1:5173','https://red-solidaria-fe.onrender.com'],allow_credentials=True,allow_methods=['*'],allow_headers=['*'])
 os.makedirs('uploads',exist_ok=True); app.mount('/uploads',StaticFiles(directory='uploads'),name='uploads')
 for r in (auth_router.router,donations.router,requests.router,matches.router,chat.router,transactions.router,ratings.router,notifications.router,dashboard.router,search.router,assistant.router,catalogs.router,admin.router,support.router): app.include_router(r)
 
