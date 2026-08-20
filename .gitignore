@@ -1,0 +1,19 @@
+# Backend
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/donaciones.db
+*.pyc
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Editor / SO
+.DS_Store
+backend/.venv/
+backend/donaciones.db
+backend/uploads/
+frontend/node_modules/
+frontend/dist/
+.env
