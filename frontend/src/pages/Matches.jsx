@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import client, { getApiErrorMessage } from '../api/client';
 
 export default function Matches() {
   const [matches, setMatches] = useState([]);
   const [donationsById, setDonationsById] = useState({});
   const [error, setError] = useState(null);
+  const { user } = useAuth();
 
   const load = async () => {
     try {
@@ -40,6 +42,8 @@ export default function Matches() {
     {matches.length === 0 && <p className="muted">Todavía no tenés coincidencias.</p>}
     {matches.map((m) => {
       const donation = donationsById[m.donation_id];
+      // Una coincidencia entre una solicitud y una donación del mismo usuario no es válida.
+      if (!donation || (user && donation.donor_id === user.id)) return null;
       return <div className="card" key={m.id}>
         <span className={`badge ${m.status}`}>{m.status}</span>
         <h3>{donation ? donation.title : `Donación #${m.donation_id}`}</h3>

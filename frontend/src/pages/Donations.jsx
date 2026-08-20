@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import client, { getApiErrorMessage } from '../api/client';
 
 const types = ['medicamento', 'alimento', 'accesorio', 'producto de higiene', 'otro'];
@@ -121,6 +122,6 @@ export default function Donations() {
     <h3>Mis publicaciones</h3>
     {mine.map(d => <div className="card" key={d.id}><span className="badge">{d.status}</span><h3>{d.title}</h3><p>{d.description}</p><p className="muted">{d.resource_type} · {d.category} · cantidad {d.quantity} · {d.location}</p>{d.expiry_date && <p>Vence: {new Date(d.expiry_date).toLocaleDateString()}</p>}</div>)}
     <h3>Donaciones disponibles</h3>
-    {items.map(d => <div className="card" key={d.id}><h3><a href={`/donaciones/${d.id}`}>{d.title}</a> {d.is_urgent && '🚨'}</h3><p>{d.description}</p><p className="muted">{d.category} · {d.location} · cantidad {d.quantity}</p></div>)}
+    {items.map(d => <div className="card" key={d.id}><h3><Link to={`/donaciones/${d.id}`}>{d.title}</Link> {d.is_urgent && '🚨'}</h3><p>{d.description}</p><p className="muted">{d.category} · {d.location} · cantidad {d.quantity}</p></div>)}
   </div>;
 }

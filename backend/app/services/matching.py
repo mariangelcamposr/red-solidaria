@@ -30,6 +30,9 @@ def calculate_score(donation,req):
 def run_matching_for_donation(db:Session,donation):
     reqs=db.query(models.Request).filter(models.Request.status.in_([models.RequestStatus.OPEN,models.RequestStatus.IN_PROGRESS])).all(); created=[]
     for req in reqs:
+        # Un usuario no puede ser donante y solicitante de su propia coincidencia.
+        if donation.donor_id == req.requester_id:
+            continue
         score,dist,criteria=calculate_score(donation,req)
         if score<=0: continue
         exists=db.query(models.Match).filter(models.Match.donation_id==donation.id,models.Match.request_id==req.id).first()
@@ -41,3 +44,39 @@ def run_matching_for_donation(db:Session,donation):
     db.commit()
     for m in created: db.refresh(m)
     return created
+
+
+def cleanup_self_matches(db: Session):
+    """Elimina coincidencias históricas inválidas entre el mismo donante y solicitante.
+
+    También devuelve la donación a disponible cuando ya no tiene coincidencias
+    válidas activas. Esto corrige datos creados por versiones anteriores que
+    permitían auto-matching.
+    """
+    self_matches = (
+        db.query(models.Match)
+        .join(models.Donation, models.Match.donation_id == models.Donation.id)
+        .filter(models.Donation.donor_id == models.Match.requester_id)
+        .all()
+    )
+    affected_donation_ids = {m.donation_id for m in self_matches}
+    for match in self_matches:
+        db.delete(match)
+    db.flush()
+    for donation_id in affected_donation_ids:
+        donation = db.query(models.Donation).filter(models.Donation.id == donation_id).first()
+        if not donation or donation.status != models.DonationStatus.MATCHED:
+            continue
+        valid_match = (
+            db.query(models.Match)
+            .join(models.Donation, models.Match.donation_id == models.Donation.id)
+            .filter(
+                models.Match.donation_id == donation_id,
+                models.Donation.donor_id != models.Match.requester_id,
+                models.Match.status != models.MatchStatus.CLOSED,
+            )
+            .first()
+        )
+        if not valid_match:
+            donation.status = models.DonationStatus.VISIBLE
+    db.commit()

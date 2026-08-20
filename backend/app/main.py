@@ -4,11 +4,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from . import models,auth
+from .services.matching import cleanup_self_matches
 from .database import Base,engine,SessionLocal
 from .routers import auth as auth_router,chat,donations,matches,ratings,requests,transactions,notifications,dashboard,search,assistant,catalogs,admin,support
 Base.metadata.create_all(bind=engine)
-app=FastAPI(title='Red Solidaria de Donaciones para Mascotas',description='Plataforma colaborativa para donar y solicitar medicamentos, alimentos, accesorios e insumos para mascotas.',version='2.1.1')
-app.add_middleware(CORSMiddleware,allow_origins=['http://localhost:5173','http://127.0.0.1:5173','https://red-solidaria-fe.onrender.com'],allow_credentials=True,allow_methods=['*'],allow_headers=['*'])
+app=FastAPI(title='Red Solidaria de Donaciones para Mascotas',description='Plataforma colaborativa para donar y solicitar medicamentos, alimentos, accesorios e insumos para mascotas.',version='2.1.3')
+app.add_middleware(CORSMiddleware,allow_origins=['http://localhost:5173','http://127.0.0.1:5173'],allow_credentials=True,allow_methods=['*'],allow_headers=['*'])
 os.makedirs('uploads',exist_ok=True); app.mount('/uploads',StaticFiles(directory='uploads'),name='uploads')
 for r in (auth_router.router,donations.router,requests.router,matches.router,chat.router,transactions.router,ratings.router,notifications.router,dashboard.router,search.router,assistant.router,catalogs.router,admin.router,support.router): app.include_router(r)
 
@@ -38,9 +39,9 @@ def seed():
         admin.email_verified=True
         admin.terms_accepted=True
         admin.privacy_accepted=True
-    db.commit(); db.close()
+    db.commit(); cleanup_self_matches(db); db.close()
 seed()
 @app.get('/')
-def root(): return {'status':'ok','docs':'/docs','version':'2.1.1'}
+def root(): return {'status':'ok','docs':'/docs','version':'2.1.3'}
 @app.get('/health')
 def health(): return {'status':'healthy'}
