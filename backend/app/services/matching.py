@@ -47,11 +47,12 @@ def run_matching_for_donation(db:Session,donation):
 
 
 def cleanup_self_matches(db: Session):
-    """Elimina coincidencias históricas inválidas entre el mismo donante y solicitante.
+    """Limpia coincidencias históricas inválidas sin romper FK con transacciones.
 
-    También devuelve la donación a disponible cuando ya no tiene coincidencias
-    válidas activas. Esto corrige datos creados por versiones anteriores que
-    permitían auto-matching.
+    Una coincidencia puede estar referenciada por Transaction.match_id. En ese caso
+    no se puede eliminar físicamente porque PostgreSQL protege la integridad
+    referencial. Se marca como CLOSED. Las coincidencias inválidas que no tienen
+    transacciones asociadas sí se eliminan.
     """
     self_matches = (
         db.query(models.Match)
@@ -59,14 +60,36 @@ def cleanup_self_matches(db: Session):
         .filter(models.Donation.donor_id == models.Match.requester_id)
         .all()
     )
+
+    if not self_matches:
+        return
+
     affected_donation_ids = {m.donation_id for m in self_matches}
+    match_ids = [m.id for m in self_matches]
+
+    # No eliminar Matches que ya estén referenciados por una Transaction.
+    referenced_match_ids = {
+        row[0]
+        for row in db.query(models.Transaction.match_id)
+        .filter(models.Transaction.match_id.in_(match_ids))
+        .all()
+    }
+
     for match in self_matches:
-        db.delete(match)
+        if match.id in referenced_match_ids:
+            # Preservamos la fila para satisfacer transactions.match_id.
+            # CLOSED hace que deje de considerarse una coincidencia activa.
+            match.status = models.MatchStatus.CLOSED
+        else:
+            db.delete(match)
+
     db.flush()
+
     for donation_id in affected_donation_ids:
         donation = db.query(models.Donation).filter(models.Donation.id == donation_id).first()
         if not donation or donation.status != models.DonationStatus.MATCHED:
             continue
+
         valid_match = (
             db.query(models.Match)
             .join(models.Donation, models.Match.donation_id == models.Donation.id)
@@ -79,4 +102,5 @@ def cleanup_self_matches(db: Session):
         )
         if not valid_match:
             donation.status = models.DonationStatus.VISIBLE
+
     db.commit()
